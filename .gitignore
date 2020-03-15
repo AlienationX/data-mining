@@ -8,6 +8,6 @@
 
 
 # tmp files
-*.csv
+#*.csv
 
 # python3
