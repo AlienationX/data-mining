@@ -15,26 +15,28 @@ meta_items = [
     "西瓜"
 ]
 
-count = len(meta_items)
-rows = 1000
+# meta_items = [str(x) for x in range(1, 101)]
+
+ROW_NUM = 1000
+COUNT = len(meta_items)
 
 
 def rand_row():
     row_items = []
-    item_count = random.randint(1, count - 1)
+    item_count = random.randint(1, COUNT - 1)
     for i in range(item_count):
-        j = random.randint(1, count - 1)
+        j = random.randint(1, COUNT - 1)
         row_items.append(meta_items[j])
     return list(set(row_items))
 
 
 def main():
-    with open("./example_data.csv", "w", encoding="utf8") as f:
-        for i in range(1, rows + 1):
-            row_items_format = str(rand_row())[1:-1].replace("'", "").replace(",", ";")
-            row = "{id},{items}".format(id=str(i), items=row_items_format)
+    with open("./generate_data.csv", "w", encoding="utf8") as f:
+        for i in range(1, ROW_NUM + 1):
+            row_items_format = ",".join(rand_row())
+            row = "{id}\t{items}".format(id=str(i), items=row_items_format)
             print(row)
-            if i == rows:
+            if i == ROW_NUM:
                 f.writelines(row)
             else:
                 f.writelines(row + "\n")
