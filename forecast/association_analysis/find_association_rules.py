@@ -1,12 +1,6 @@
 # coding=utf-8
 # python3
 
-"""
-1、基于最底层的所有item生成2项集、3项集等
-2、优点：有现成的函数combinations生成k项集
-3、缺点：生成的项集太多，每次循环组合的项集再判断明细项中是否包含。太耗时，且生成的组合项很多没用
-"""
-
 from itertools import combinations
 import pandas as pd
 
@@ -99,7 +93,7 @@ class FindAssociationRules:
                     x = sorted_combination
                     y = tuple(set(index) - set(sorted_combination))
                     numerator = self.frequent_set.at[index, "num"]
-                    denominator = self.frequent_set.at[sorted_combination, "num"]
+                    denominator = self.frequent_set.at[sorted_combination, "num"]  # 频繁项集可以使用dict存储，通过选择key(频繁项)快速获取value(频次)
                     confidence = round(numerator / denominator, 4)  # 计算置信度
                     print(x, "==>", y, confidence)
 
@@ -132,6 +126,6 @@ if __name__ == "__main__":
     # far.run_association_rules()
 
     df = pd.read_csv("./data/groceries.csv", names=["items"], sep="\t")  # chunksize=500
-    far = FindAssociationRules(df, 0.05, 0.25)
+    far = FindAssociationRules(df, 0.02, 0.4)
     far.run_frequent_set()
     far.run_association_rules()
