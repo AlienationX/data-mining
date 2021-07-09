@@ -1,7 +1,15 @@
 # coding=utf-8
 # python3
 
+"""
+1、基于最底层的所有item生成2项集、3项集等
+2、优点：有现成的函数combinations生成k项集
+3、缺点：生成的项集太多，每次循环组合的项集再判断明细项中是否包含。太耗时，且生成的组合项很多没用
+"""
+
+from datetime import datetime
 from itertools import combinations
+from sqlalchemy import create_engine, pool
 import pandas as pd
 
 
@@ -44,6 +52,7 @@ class FindAssociationRules:
     def create_lk(self, k):
         lk_data = {}
         for index, val in self.transactions.iterrows():
+            print("execute rowid: " + str(index) + " in attempt" + str(k))
             items = set(val["items"].split(","))
             for sorted_combination in get_sorted_combinations(items, k):
                 if sorted_combination in lk_data:
@@ -57,16 +66,18 @@ class FindAssociationRules:
         lk_df["row_num"] = self.transactions_num
         lk_df["support"] = round(lk_df["num"] / lk_df["row_num"], 4)  # 计算支持度
         lk_df["k"] = k
+        # print(lk_df)
 
         lk_df = lk_df[lk_df["support"] >= self.min_support]
-        # 显示最大支持数，便于跳正最小支持度数值
         if k == 1:
-            lk_df = lk_df.sort_values(by="support", ascending=False)
+            lk_df = lk_df.sort_values(by=["support"], ascending=[False])
+        # print(lk_df)
 
         return lk_df
 
     def run_frequent_set(self):
         for i in range(1, self.k + 1):
+            print(i, datetime.now())
             lk_df = self.create_lk(i)
             if len(lk_df) == 0:
                 break
@@ -93,7 +104,7 @@ class FindAssociationRules:
                     x = sorted_combination
                     y = tuple(set(index) - set(sorted_combination))
                     numerator = self.frequent_set.at[index, "num"]
-                    denominator = self.frequent_set.at[sorted_combination, "num"]  # 频繁项集可以使用dict存储，通过选择key(频繁项)快速获取value(频次)
+                    denominator = self.frequent_set.at[sorted_combination, "num"]
                     confidence = round(numerator / denominator, 4)  # 计算置信度
                     print(x, "==>", y, confidence)
 
@@ -103,8 +114,6 @@ class FindAssociationRules:
                     rules_data.append(rules_data_row)
 
         self.association_rules = pd.DataFrame(rules_data, columns=["x", "y", "numerator", "denominator", "confidence"])
-        # 排序，相同key根据高的置信度提前推荐
-        self.association_rules.sort_values(by="confidence", ascending=False, inplace=True)
         print("-" * 100, "association rules")
         print(self.association_rules)
 
@@ -113,19 +122,11 @@ if __name__ == "__main__":
     print(list(combinations(['a', 'b', 'c', 'd'], 3)))
     print(get_sorted_combinations_all(['a', 'b', 'c', 'd']))
 
-    # 示例数据
-    # df = pd.read_csv("./data/example_data.csv", names=["id", "items"], sep="\t")  # chunksize=500
-    # far = FindAssociationRules(df, 0.5, 0.7)
-    # far.run_frequent_set()
-    # far.run_association_rules()
+    # df = pd.read_csv("./example_data.csv", names=["id", "items"], sep="\t")  # 0.5, 0.75
+    # df = pd.read_csv("./groceries.csv", names=["items"], sep="\t")  # 0.05, 0.25
 
-    # 随机生成的数据效果太差，不推荐
-    # df = pd.read_csv("./data/generate_data.csv", names=["id", "items"], sep="\t")  # chunksize=500
-    # far = FindAssociationRules(df, 0.2, 0.7)
-    # far.run_frequent_set()
-    # far.run_association_rules()
-
-    df = pd.read_csv("./data/groceries.csv", names=["items"], sep="\t")  # chunksize=500
-    far = FindAssociationRules(df, 0.02, 0.4)
+    conn = create_engine("impala://10.63.82.200:21050/medical", echo=False, poolclass=pool.NullPool)
+    df = pd.read_sql("select * from tmp.transactions", conn)
+    far = FindAssociationRules(df, 0.05, 0.25)
     far.run_frequent_set()
     far.run_association_rules()
